@@ -6,19 +6,25 @@
 
 import docker                   # to talk to docker
 import pprint                   # for printing to the command line
-import logging                  #log progress, or lack thereof
-from selenium import webdriver  # launch a browser to watch luigid
+import logging                  # log progress, or lack thereof
+from threading import Thread    # to run selenium on its own thread
+from selenium import webdriver  # launch a browser to watch luigid scheduler
+import time                     # to control a loop
 
 # TODO:
-# let selenium launch http://192.168.99.100:8082/static/visualiser/index.html#
+# mount a scripts directory volume so luigid can run py scripts
+# bind logs directory with /var/log
+# bind state file with /var/tmp/luigi-task-hist.db ?
+# remove the worker container after the task is done
+# let it tell you what it's doing on a slack channel
  
 # minimal logging...
-# add filemode="w" to overwrite
 logging.basicConfig(
     filename="prep_luigi.log", 
     level=logging.DEBUG,
     format='%(asctime)s %(message)s', 
-    datefmt='%m/%d/%Y %I:%M:%S %p'
+    datefmt='%m/%d/%Y %I:%M:%S %p',
+    filemode='w'
     )
  
 logging.debug("Start - debug")
@@ -50,11 +56,11 @@ print(" ")
 pp.pprint(info)
 print(" ")
 
-print(" ")
-print("*************Images****************")
-print(" ")
-pp.pprint(client.images())
-print(" ")
+#print(" ")
+#print("*************Images****************")
+#print(" ")
+#pp.pprint(client.images())
+#print(" ")
 
 #print(" ")
 #print("*************Volumes****************")
@@ -62,13 +68,6 @@ print(" ")
 #pp.pprint(client.volumes())
 #print(" ")
 #print(" ")
-
-# TODO:
-# bind a scripts directory so luigid can run scripts
-# bind logs directory with /var/log
-# bind state file with /var/tmp/luigi-task-hist.db
-# use -H, --hosts[] to connect luigid to the docker Daemon?
-
 
 #create a luigid container
 containerA = client.create_container (
@@ -87,7 +86,13 @@ if containerA:
         #command='/usr/local/app1/scripts/run.sh',
         stdin_open=True,
         tty=True,
-        name='luigi-worker'
+        name='luigi-worker',
+        host_config=client.create_host_config(binds={
+            '/users/trota/source/luigi/docker-luigi/scripts': {
+                'bind': '/usr/local/app1/scripts/test',
+                'mode': 'ro',
+                }
+            })
 	    )
 	
 print(" ")
@@ -113,17 +118,75 @@ print("containerA")
 pp.pprint(client.inspect_container(containerA))
 print("")
 
-# open a browser for luigid
-browser = webdriver.Chrome()
-browser.get('http://192.168.99.100:8082/static/visualiser/index.html#')
-
 print("")
 print("1")
 print("containerB")
 pp.pprint(client.inspect_container(containerB))
 print("")
 
-# TODO: call this snippet from a luigi task class
+
+
+# open a browser for luigid
+def open_browser():
+    # TODO: make this a class with tasks pending and running as object properties
+    browser = webdriver.Chrome()
+    browser.get('http://192.168.99.100:8082/static/visualiser/index.html#')
+
+    #tasks_pending = browser.find_element_by_id(
+	#    "PENDING_info"
+	#    )
+    #tasks_running = browser.find_element_by_id(
+    #    "RUNNING_info"
+    #    )
+
+    tasks_pending = browser.find_element_by_css_selector(
+        "#PENDING_info span.info-box-number"
+        )
+    tasks_running = browser.find_element_by_css_selector(
+        "#RUNNING_info span.info-box-number"
+        )
+
+    num_tasks_pending = tasks_pending.text
+    num_tasks_running = tasks_running.text
+
+    num_tasks_pending.strip()
+    num_tasks_running.strip()
+
+    print("")
+    print("pending: ", tasks_pending.text)
+    print("")
+    print("running: ", tasks_running.text)
+    
+	#time_end = time.time() + 60 * 5
+    #while time.time() < time_end:
+    while (int(num_tasks_pending) > 0) or (int(num_tasks_running) > 0):
+        time.sleep(5)
+        browser.refresh()
+
+        tasks_pending = browser.find_element_by_css_selector(
+            "#PENDING_info span.info-box-number"
+            )
+        tasks_running = browser.find_element_by_css_selector(
+            "#RUNNING_info span.info-box-number"
+            )
+
+        num_tasks_pending = tasks_pending.text
+        num_tasks_running = tasks_running.text
+
+        num_tasks_pending.strip()
+        num_tasks_running.strip()
+
+        if (int(num_tasks_pending) == 0) and (int(num_tasks_running) == 0):
+            browser.quit()
+
+
+browser_thread = Thread(target=open_browser)
+browser_thread.start()
+
+
+
+
+# TODO: call this from a luigi task class
 # TODO: better to bind to host/scripts directory and pass in a filename
 # exec_create to execute a command in a running container
 cmd_dict = client.exec_create(container=containerB.get('Id'), cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True)
@@ -139,15 +202,16 @@ for k, v in cmd_dict.items():
     print(k, v)
     print(" ")
     pp.pprint(client.exec_inspect(v))
-    logging.debug(client.exec_inspect(v))
+    logging.debug("Command:  %s", client.exec_inspect(v))
     print(" ")
 
 # exec_start to run the command we just set up
-# Just for running containers?  You can set command in create_container.
+# Just for running containers - you can set command in create_container.
 print("executing argument...")
 cmd_result = client.exec_start(v)
 print("")
 print("")
+
 # see what execution returned
 pp.pprint(cmd_result)
 cmd_result = cmd_result.decode("utf-8")
@@ -155,6 +219,9 @@ print(cmd_result)
 
 print("")
 print("done")
+
+# feeble thread management - this was the selenium browsers thread
+browser_thread.join()
 
 logging.debug("Done - debug")
 #logging.info("Done - info")
