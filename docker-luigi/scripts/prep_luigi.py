@@ -4,16 +4,34 @@
 # setup TLS support so they can talk to each other
 # let the worker execute a task
 
-import docker
-import pprint
+import docker                   # to talk to docker
+import pprint                   # for printing to the command line
+import logging                  #log progress, or lack thereof
+from selenium import webdriver  # launch a browser to watch luigid
+
+# TODO:
+# let selenium launch http://192.168.99.100:8082/static/visualiser/index.html#
+ 
+# minimal logging...
+# add filemode="w" to overwrite
+logging.basicConfig(
+    filename="prep_luigi.log", 
+    level=logging.DEBUG,
+    format='%(asctime)s %(message)s', 
+    datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
+ 
+logging.debug("Start - debug")
+#logging.info("Start - info")
+#logging.error("Start - error")
 
 #client = docker.from_env(assert_hostname=False)
 #print (client.version())
 
 # tls might not work, or at least not this way, with Docker Toolbox
 # try putting the bridge network ip in the cfg file on the worker - no luck
-# try changing RPC security settings?
-# run scripts from within docker toolbox, at prompt
+# try changing RPC security settings?  - no
+# run scripts from docker toolbox prompt
 # or from within containers
 
 tls_config = docker.tls.TLSConfig \
@@ -95,6 +113,10 @@ print("containerA")
 pp.pprint(client.inspect_container(containerA))
 print("")
 
+# open a browser for luigid
+browser = webdriver.Chrome()
+browser.get('http://192.168.99.100:8082/static/visualiser/index.html#')
+
 print("")
 print("1")
 print("containerB")
@@ -117,6 +139,7 @@ for k, v in cmd_dict.items():
     print(k, v)
     print(" ")
     pp.pprint(client.exec_inspect(v))
+    logging.debug(client.exec_inspect(v))
     print(" ")
 
 # exec_start to run the command we just set up
@@ -133,3 +156,5 @@ print(cmd_result)
 print("")
 print("done")
 
+logging.debug("Done - debug")
+#logging.info("Done - info")
