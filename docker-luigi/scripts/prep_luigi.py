@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# setup a luigid scheduler container and luigi worker
-# setup TLS support so they can talk to each other
-# let the worker execute a task
-
+# encoding='utf-8'
+"""
+ prep_luigi.py
+ sets up a luigid scheduler container and luigi worker
+ sets up TLS support so they can talk to each other
+ lets the worker execute a task
+"""
 import docker                   # to talk to docker
 import pprint                   # for printing to the command line
 import logging                  # log progress, or lack thereof
@@ -35,12 +36,8 @@ logging.debug("Start - debug")
 #client = docker.from_env(assert_hostname=False)
 #print (client.version())
 
-# tls might not work, or at least not this way, with Docker Toolbox
-# try putting the bridge network ip in the cfg file on the worker - no luck
-# try changing RPC security settings?  - no
-# run scripts from docker toolbox prompt
-# or from within containers
-
+# set paths to certs for tls
+# set base url
 tls_config = docker.tls.TLSConfig \
     (client_cert= \
         ('C:\\Users\\trota\\.docker\\machine\\certs\\cert.pem', \
@@ -49,6 +46,8 @@ tls_config = docker.tls.TLSConfig \
         )
 client = docker.Client(base_url='https://192.168.99.100:2376', tls=tls_config)
 
+
+# print some information about the environment
 info = client.info()
 pp = pprint.PrettyPrinter(indent=4)
 print(" ")
@@ -69,6 +68,7 @@ print(" ")
 #pp.pprint(client.volumes())
 #print(" ")
 #print(" ")
+
 
 #create a luigid container
 containerA = client.create_container (
@@ -102,7 +102,8 @@ if containerA:
                 }
             })
 	    )
-	
+
+		
 print(" ")
 print("************Containers****************")
 print(" ")
@@ -116,11 +117,10 @@ print("")
 print("0")
 print("")
 
-
-#client.start(containerA.get('Id'))
-#client.start(containerB.get('Id'))
+# start the containers
 client.start(containerA)
 client.start(containerB)
+
 print("")
 print("containerA")
 pp.pprint(client.inspect_container(containerA))
@@ -181,26 +181,20 @@ def open_browser():
             time.sleep(5)  # give yourself 5 secs to see small tasks
             browser.quit()
 
-
+# let the browser have its own thread
 browser_thread = Thread(target=open_browser)
 browser_thread.start()
 
 
+# set up commands to execute
 
-
-# TODO: call this from a luigi task class
-#       let the py file name be a variable
-# TODO: better to bind to host/scripts directory and pass in a filename
-# exec_create to execute a command in a running container
-# run.sh calls a specific python script
-
-# run a python script from a shell script
+# to run a python script from a shell script
 #cmd_dict = client.exec_create(
 #    container=containerB.get('Id'),
 #    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
 #    )
 
-# run a python script directly
+# to run a python script directly
 cmd_dict = client.exec_create(
     container=containerB.get('Id'),
     cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
