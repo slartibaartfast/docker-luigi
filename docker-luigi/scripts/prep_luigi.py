@@ -12,12 +12,12 @@ from selenium import webdriver  # launch a browser to watch luigid scheduler
 import time                     # to control a loop
 
 # TODO:
-# mount a scripts directory volume so luigid can run py scripts
 # bind logs directory with /var/log
-# bind state file with /var/tmp/luigi-task-hist.db ?
 # remove the worker container after the task is done
 # let it tell you what it's doing on a slack channel
-# make some task classes.  Try github/bonsanini/run_luigi.py
+# make some more task classes
+# set the luigi-worker working dir to scripts directory
+# append a timestamp to task names so that tasks are unique
  
 # minimal logging...
 logging.basicConfig(
@@ -76,7 +76,14 @@ containerA = client.create_container (
     hostname="luigi-monitor",
     name="luigi-monitor",
     ports=[8082, 2376],
-    host_config=client.create_host_config(port_bindings={8082: ('192.168.99.100', 8082)})
+    host_config=client.create_host_config(
+        port_bindings={8082: ('192.168.99.100', 8082)},
+        binds={'/c/Users/trota/Source/luigi/docker-luigi/luigid/state': {
+            'bind': '/var/tmp',
+            'mode': 'rw',
+            }
+        }
+        )
     )
 
 if containerA:
@@ -133,13 +140,6 @@ def open_browser():
     browser = webdriver.Chrome()
     browser.get('http://192.168.99.100:8082/static/visualiser/index.html#')
 
-    #tasks_pending = browser.find_element_by_id(
-	#    "PENDING_info"
-	#    )
-    #tasks_running = browser.find_element_by_id(
-    #    "RUNNING_info"
-    #    )
-
     tasks_pending = browser.find_element_by_css_selector(
         "#PENDING_info span.info-box-number"
         )
@@ -195,17 +195,17 @@ browser_thread.start()
 # run.sh calls a specific python script
 
 # run a python script from a shell script
-cmd_dict = client.exec_create(
-    container=containerB.get('Id'),
-    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
-    )
-
-# run a python script directly
 #cmd_dict = client.exec_create(
 #    container=containerB.get('Id'),
-#    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
-#    stdout=True, stderr=True
+#    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
 #    )
+
+# run a python script directly
+cmd_dict = client.exec_create(
+    container=containerB.get('Id'),
+    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
+    stdout=True, stderr=True
+    )
 
 
 
