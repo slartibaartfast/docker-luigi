@@ -17,6 +17,7 @@ import time                     # to control a loop
 # bind state file with /var/tmp/luigi-task-hist.db ?
 # remove the worker container after the task is done
 # let it tell you what it's doing on a slack channel
+# make some task classes.  Try github/bonsanini/run_luigi.py
  
 # minimal logging...
 logging.basicConfig(
@@ -88,9 +89,9 @@ if containerA:
         tty=True,
         name='luigi-worker',
         host_config=client.create_host_config(binds={
-            '/users/trota/source/luigi/docker-luigi/scripts': {
+            '/c/Users/trota/Source/luigi/docker-luigi/scripts': {
                 'bind': '/usr/local/app1/scripts/test',
-                'mode': 'ro',
+                'mode': 'rw',
                 }
             })
 	    )
@@ -177,6 +178,7 @@ def open_browser():
         num_tasks_running.strip()
 
         if (int(num_tasks_pending) == 0) and (int(num_tasks_running) == 0):
+            time.sleep(5)  # give yourself 5 secs to see small tasks
             browser.quit()
 
 
@@ -187,9 +189,25 @@ browser_thread.start()
 
 
 # TODO: call this from a luigi task class
+#       let the py file name be a variable
 # TODO: better to bind to host/scripts directory and pass in a filename
 # exec_create to execute a command in a running container
-cmd_dict = client.exec_create(container=containerB.get('Id'), cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True)
+# run.sh calls a specific python script
+
+# run a python script from a shell script
+cmd_dict = client.exec_create(
+    container=containerB.get('Id'),
+    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
+    )
+
+# run a python script directly
+#cmd_dict = client.exec_create(
+#    container=containerB.get('Id'),
+#    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
+#    stdout=True, stderr=True
+#    )
+
+
 
 print("")
 print("2")
