@@ -183,7 +183,7 @@ def open_browser():
 
 # let the browser have its own thread
 browser_thread = Thread(target=open_browser)
-browser_thread.start()
+# browser_thread.start()
 
 
 # set up commands to execute
@@ -195,9 +195,17 @@ browser_thread.start()
 #    )
 
 # to run a python script directly
+#cmd_dict = client.exec_create(
+#    container=containerB.get('Id'),
+#    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
+#    stdout=True, stderr=True
+#    )
+
+# to run a python script with arguments
 cmd_dict = client.exec_create(
     container=containerB.get('Id'),
-    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
+    #cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
+    cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
     stdout=True, stderr=True
     )
 
@@ -233,7 +241,7 @@ print("")
 print("done")
 
 # feeble thread management - this was the selenium browsers thread
-browser_thread.join()
+# browser_thread.join()
 
 logging.debug("Done - debug")
 #logging.info("Done - info")
