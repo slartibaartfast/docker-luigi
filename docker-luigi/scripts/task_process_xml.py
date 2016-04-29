@@ -7,13 +7,17 @@
 """
 
 import luigi
-#import vmd2json
 from luigi.parameter import ParameterException
 #from luigi.contrib.opener import OpenerTarget
 import time
 import xmltodict
 import json
 import logging
+
+# TODO:
+# get rid of hardcoded parameters - see luigi.parameter
+# call this via rest
+# index the json output with elasticsearch
 
 # minimal logging...
 # where is this file ending up?
@@ -29,15 +33,13 @@ logging.basicConfig(
 	
 logging.debug("Start - debug")
 
-print("")
-print("hi I'm not being cached")
-print("")
+#print("")
+#print("hi I'm not being cached atm ")
+#print("")
 
 class CheckFile(luigi.Task):
     # see what kind of file we are receiving
     in_file = luigi.Parameter()
-    #in_file = ('fruits.xml')
-    #print('in file ', in_file)
 
     def test_parameter(self):
         self.assertRaises(luigi.parameter.ParameterException)
@@ -51,13 +53,11 @@ class CheckFile(luigi.Task):
     #    return []
 
     def output(self):
-        #return luigi.LocalTarget(self.in_file)
         return self.in_file
 
     def run(self):
         self.output().open('r').close()
         #self.output().open('rb').close()
-        print("open rb")
 
 class ConvertFile(luigi.Task):
     # do the conversion
@@ -68,8 +68,8 @@ class ConvertFile(luigi.Task):
     def requires(self):
         print("")
         print("2")
+        print("INFO: in ConvertFile.requires")
         print("")
-        print("in asdf requires to checkfile")
         return CheckFile(in_file=self.in_file)
 
     def output(self):
@@ -79,13 +79,12 @@ class ConvertFile(luigi.Task):
 
     def run(self):
         # for python 3, convert xml to binary - check six?
-        #with open(self.in_file, "rb") as f:
+        #with self.in_file.open("r") as f:
         with self.in_file.open("rb") as f:
             logging.debug("File:  %s", f)
-        #with self.in_file.open("r") as f:
             output_dict = xmltodict.parse(f, xml_attribs=True)
             json.dumps(output_dict, indent=4)
-            print('output ', output_dict)
+            #print('output ', output_dict)
 
         with self.output().open('w') as file:
             json.dump(output_dict, file)
