@@ -4,13 +4,15 @@
  sets up a luigid scheduler container and luigi worker
  sets up TLS support so they can talk to each other
  lets the worker execute a task
+ 
+ see docker-py on github and docs.docker site
 """
 import docker                   # to talk to docker
 import pprint                   # for printing to the command line
 import logging                  # log progress, or lack thereof
 from threading import Thread    # to run selenium on its own thread
 from selenium import webdriver  # launch a browser to watch luigid scheduler
-import time                     # to control a loop
+import time                     # to control a loop and/or a browser
 
 # TODO:
 # bind logs directory with /var/log
@@ -19,6 +21,7 @@ import time                     # to control a loop
 # make some more task classes
 # set the luigi-worker working dir to scripts directory
 # append a timestamp to task names so that tasks are unique
+# move this to docker-compose yml file?
  
 # minimal logging...
 logging.basicConfig(
@@ -86,10 +89,11 @@ containerA = client.create_container (
         )
     )
 
-if containerA:
+if containerA is not None:
     # create a worker container
     containerB = client.create_container(
         image='trota/docker-luigi-worker:latest',
+        #image='trota/luigi-worker-py3.5.1',
         ports=[8082, 2376],
         #command='/usr/local/app1/scripts/run.sh',
         stdin_open=True,
@@ -182,33 +186,40 @@ def open_browser():
             browser.quit()
 
 # let the browser have its own thread
-browser_thread = Thread(target=open_browser)
+# browser_thread = Thread(target=open_browser)
 # browser_thread.start()
 
 
 # set up commands to execute
+# TODO:
+# let commands live in their own files
 
 # to run a python script from a shell script
-#cmd_dict = client.exec_create(
-#    container=containerB.get('Id'),
-#    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
-#    )
+# (i.e. docker run -it -rm --name luigi_worker trota/docker-luigi-worker "/usr/local/app1/scripts/run.sh")
+cmd_dict = client.exec_create(
+    container=containerB.get('Id'),
+    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
+    )
 
-# to run a python script directly
+# to run a python script somewhat more directly
 #cmd_dict = client.exec_create(
 #    container=containerB.get('Id'),
-#    cmd='python /usr/local/app1/scripts/test/task_print_numbers.py', \
+#    #cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
+#    cmd='python /usr/local/app1/scripts/test/task_process_xml.py',
 #    stdout=True, stderr=True
 #    )
 
 # to run a python script with arguments
-cmd_dict = client.exec_create(
-    container=containerB.get('Id'),
-    #cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
-    cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
-    stdout=True, stderr=True
-    )
-
+# in a container with cmd of python, where you have a python prompt at entry
+# exec(compile(open(filename, "rb").read(), filename, 'exec'), globals, locals)
+# or
+# exec(open("./filename").read())
+#task_file="/usr/local/app1/scripts/test/task_process_xml.py"
+#cmd_dict = client.exec_create(
+#    container=containerB.get('Id'),
+#    #cmd='exec(compile(open(task_file, "rb").read(), task_file, 'exec'))'
+#    stdout=True, stderr=True, stdin=True
+#    )
 
 
 print("")
@@ -226,7 +237,7 @@ for k, v in cmd_dict.items():
     print(" ")
 
 # exec_start to run the command we just set up
-# Just for running containers - you can set command in create_container.
+# Just for containers which are running - you can set command in create_container.
 print("executing argument...")
 cmd_result = client.exec_start(v)
 print("")
@@ -240,7 +251,7 @@ print(cmd_result)
 print("")
 print("done")
 
-# feeble thread management - this was the selenium browsers thread
+# feeble thread management - the selenium browsers thread
 # browser_thread.join()
 
 logging.debug("Done - debug")
