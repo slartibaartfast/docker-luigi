@@ -73,7 +73,8 @@ print(" ")
 #print(" ")
 
 
-#create a luigid container
+# create a luigid container
+# bind a directory to the container for persistant task history
 containerA = client.create_container (
     image='tedder42/docker-luigid:latest',
     hostname="luigi-monitor",
@@ -91,9 +92,10 @@ containerA = client.create_container (
 
 if containerA is not None:
     # create a worker container
+    # bind a scripts directory to the container
     containerB = client.create_container(
-        image='trota/docker-luigi-worker:latest',
-        #image='trota/luigi-worker-py3.5.1',
+        #image='trota/docker-luigi-worker:latest',  # py 2.7
+        image='trota/luigi-worker3:python3',      # py 3.5
         ports=[8082, 2376],
         #command='/usr/local/app1/scripts/run.sh',
         stdin_open=True,
@@ -196,18 +198,19 @@ def open_browser():
 
 # to run a python script from a shell script
 # (i.e. docker run -it -rm --name luigi_worker trota/docker-luigi-worker "/usr/local/app1/scripts/run.sh")
-cmd_dict = client.exec_create(
-    container=containerB.get('Id'),
-    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
-    )
-
-# to run a python script somewhat more directly
 #cmd_dict = client.exec_create(
 #    container=containerB.get('Id'),
-#    #cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
-#    cmd='python /usr/local/app1/scripts/test/task_process_xml.py',
-#    stdout=True, stderr=True
+#    cmd='/usr/local/app1/scripts/run.sh', stdout=True, stderr=True
 #    )
+
+# to run a python script somewhat more directly
+cmd_dict = client.exec_create(
+    container=containerB.get('Id'),
+    #cmd="python -m luigi --module 'c:\\Users\\trota\\Source\\luigi\\docker-luigi\\scripts\\task_process_xml.py' ConvertFile --in_file fruits.xml",
+    #cmd='python /usr/local/app1/scripts/test/task_process_xml.py',
+    cmd='python /usr/local/app1/scripts/test/task_ftp.py',
+    stdout=True, stderr=True
+    )
 
 # to run a python script with arguments
 # in a container with cmd of python, where you have a python prompt at entry
@@ -229,6 +232,7 @@ print("")
 pp.pprint(client.containers())
 print("")
 print("")
+# loop through the command(s)
 for k, v in cmd_dict.items():
     print(k, v)
     print(" ")
@@ -236,7 +240,7 @@ for k, v in cmd_dict.items():
     logging.debug("Command:  %s", client.exec_inspect(v))
     print(" ")
 
-# exec_start to run the command we just set up
+# exec_start to run the command(s) we just set up
 # Just for containers which are running - you can set command in create_container.
 print("executing argument...")
 cmd_result = client.exec_start(v)
@@ -250,6 +254,12 @@ print(cmd_result)
 
 print("")
 print("done")
+
+# force removal of the worker container and any volumes
+client.remove_container(
+    container=containerB,
+    v=True,
+    force=True)
 
 # feeble thread management - the selenium browsers thread
 # browser_thread.join()
