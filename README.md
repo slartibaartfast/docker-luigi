@@ -23,6 +23,8 @@ See also:
 
 [luigi](https://github.com/spotify/luigi)
 
+[ansible config script for WinRM](https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1)
+
 [axiom-data-science/docker-luigi](https://github.com/axiom-data-science/docker-luigi)
 
 [asnir/docker-luigi](https://github.com/asnir/docker-luigi)
