@@ -21,8 +21,9 @@ See also:
 
 [docker-py](https://github.com/docker/docker-py)
 
+[luigi](https://github.com/spotify/luigi)
+
 [axiom-data-science/docker-luigi](https://github.com/axiom-data-science/docker-luigi)
 
 [asnir/docker-luigi](https://github.com/asnir/docker-luigi)
 
-[luigi](https://github.com/spotify/luigi)
